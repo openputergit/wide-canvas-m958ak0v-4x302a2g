@@ -1,0 +1,2357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPI Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .clay-card {
+            background: #2a3442;
+            border-radius: 16px;
+            box-shadow: 8px 8px 16px #1a202c,
+                       -8px -8px 16px #3a4452;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        .clay-card:hover {
+            transform: translateY(-5px);
+        }
+        .clay-button {
+            background: #374151;
+            border-radius: 12px;
+            box-shadow: 5px 5px 10px #1a202c,
+                       -5px -5px 10px #3a4452;
+            transition: all 0.3s ease;
+        }
+        .clay-button:active {
+            box-shadow: inset 5px 5px 10px #1a202c,
+                       inset -5px -5px 10px #3a4452;
+        }
+        .sidebar-item {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+        }
+        .sidebar-item:hover {
+            background: #374151;
+            box-shadow: inset 3px 3px 6px #1a202c,
+                       inset -3px -3px 6px #3a4452;
+        }
+        .sidebar-item.active {
+            background: #374151;
+            box-shadow: inset 3px 3px 6px #1a202c,
+                       inset -3px -3px 6px #3a4452;
+            color: white;
+        }
+        #contentArea > div {
+            display: none;
+        }
+        #contentArea > div.active {
+            display: block;
+        }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            overflow: auto;
+            transition: all 0.3s ease;
+        }
+        .modal-content {
+            background: #2a3442;
+            border-radius: 16px;
+            box-shadow: 8px 8px 16px #1a202c, -8px -8px 16px #3a4452;
+            width: 90%;
+            max-width: 600px;
+            margin: 10% auto;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        /* Progress bars */
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: #4B5563;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+        
+        /* Custom checkbox */
+        .custom-checkbox {
+            height: 20px;
+            width: 20px;
+            background: #374151;
+            border-radius: 6px;
+            box-shadow: inset 2px 2px 5px #1a202c, inset -2px -2px 5px #3a4452;
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+        .custom-checkbox:checked {
+            background: #60A5FA;
+            box-shadow: inset 2px 2px 5px #4989e0, inset -2px -2px 5px #7bc2ff;
+        }
+        
+        /* Loading animation */
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        .loading-pulse {
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                z-index: 100;
+                transition: transform 0.3s ease;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <div class="flex flex-col md:flex-row">
+        <!-- Mobile menu toggle -->
+        <button id="sidebarToggle" class="md:hidden fixed top-4 left-4 z-50 clay-button p-2 text-white">
+            <i class="bi bi-list text-xl"></i>
+        </button>
+        
+        <!-- Sidebar -->
+        <div id="sidebar" class="sidebar clay-card w-64 min-h-screen p-4 z-40 md:static">
+            <div class="text-xl font-bold mb-8 flex items-center justify-between">
+                <span>UPI Admin Panel</span>
+                <button id="closeSidebar" class="md:hidden clay-button p-1">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <nav>
+                <div class="space-y-3">
+                    <a href="#dashboard" class="sidebar-item flex items-center p-3 text-gray-300 hover:text-white active" onclick="showContent('dashboard', this)">
+                        <i class="bi bi-grid-1x2-fill mr-3"></i> Dashboard
+                    </a>
+                    <a href="#users" class="sidebar-item flex items-center p-3 text-gray-300 hover:text-white" onclick="showContent('users', this)">
+                        <i class="bi bi-people-fill mr-3"></i> Users
+                    </a>
+                    <a href="#cards" class="sidebar-item flex items-center p-3 text-gray-300 hover:text-white" onclick="showContent('cards', this)">
+                        <i class="bi bi-credit-card-fill mr-3"></i> Cards
+                    </a>
+                    <a href="#upiids" class="sidebar-item flex items-center p-3 text-gray-300 hover:text-white" onclick="showContent('upiids', this)">
+                        <i class="bi bi-upc-scan mr-3"></i> UPI IDs
+                    </a>
+                    <a href="#transactions" class="sidebar-item flex items-center p-3 text-gray-300 hover:text-white" onclick="showContent('transactions', this)">
+                        <i class="bi bi-arrow-left-right mr-3"></i> Transactions
+                    </a>
+                    <a href="#reports" class="sidebar-item flex items-center p-3 text-gray-300 hover:text-white" onclick="showContent('reports', this)">
+                        <i class="bi bi-file-text-fill mr-3"></i> Reports
+                    </a>
+                    <a href="#settings" class="sidebar-item flex items-center p-3 text-gray-300 hover:text-white" onclick="showContent('settings', this)">
+                        <i class="bi bi-gear-fill mr-3"></i> Settings
+                    </a>
+                </div>
+            </nav>
+            
+            <div class="mt-auto pt-6 border-t border-gray-700 mt-6">
+                <div class="text-sm text-gray-400">System Status</div>
+                <div class="flex items-center mt-2">
+                    <span class="h-3 w-3 bg-green-500 rounded-full mr-2"></span>
+                    <span class="text-sm">All Systems Operational</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content w-full p-4 md:p-8 md:ml-0">
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-2xl font-bold">Company Name</h1>
+                </div>
+                <div class="flex space-x-3">
+                    <button class="clay-button px-3 py-2 text-blue-400 hover:text-blue-300">
+                        <i class="bi bi-bell-fill"></i>
+                        <span class="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
+                    </button>
+                    <button class="clay-button px-4 py-2 text-red-400 hover:text-red-300" onclick="showLogoutConfirm()">
+                        <i class="bi bi-box-arrow-right mr-2"></i>Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div id="contentArea">
+                <!-- Dashboard Content -->
+                <div id="dashboard" class="active">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6 mb-8">
+                        <div class="clay-card">
+                            <div class="text-gray-400">Total Cards</div>
+                            <div class="text-2xl font-bold" id="totalCards">1,234</div>
+                            <div class="text-xs text-gray-400 mt-2">
+                                <span class="text-green-400"><i class="bi bi-arrow-up"></i> 2.3%</span> since yesterday
+                            </div>
+                        </div>
+                        <div class="clay-card">
+                            <div class="text-gray-400">Total Users</div>
+                            <div class="text-2xl font-bold" id="totalUsers">5,678</div>
+                            <div class="text-xs text-gray-400 mt-2">
+                                <span class="text-green-400"><i class="bi bi-arrow-up"></i> 1.4%</span> since yesterday
+                            </div>
+                        </div>
+                        <div class="clay-card">
+                            <div class="text-gray-400">Active UPI IDs</div>
+                            <div class="text-2xl font-bold" id="activeUPIs">890</div>
+                            <div class="text-xs text-gray-400 mt-2">
+                                <span class="text-red-400"><i class="bi bi-arrow-down"></i> 0.8%</span> since yesterday
+                            </div>
+                        </div>
+                        <div class="clay-card">
+                            <div class="text-gray-400">Transactions Today</div>
+                            <div class="text-2xl font-bold" id="transToday">432</div>
+                            <div class="text-xs text-gray-400 mt-2">
+                                <span class="text-green-400"><i class="bi bi-arrow-up"></i> 5.1%</span> since yesterday
+                            </div>
+                        </div>
+                        <div class="clay-card">
+                            <div class="text-gray-400">24h Amount</div>
+                            <div class="text-2xl font-bold" id="amount24h">₹89,432</div>
+                            <div class="text-xs text-gray-400 mt-2">
+                                <span class="text-green-400"><i class="bi bi-arrow-up"></i> 3.7%</span> since yesterday
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="clay-card mb-8">
+                        <h3 class="text-lg mb-4">Filter Dashboard Data</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                            <select class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                                <option>All Companies</option>
+                                <option>Company A</option>
+                                <option>Company B</option>
+                                <option>Company C</option>
+                            </select>
+                            <select class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                                <option>All Cards</option>
+                                <option>Visa</option>
+                                <option>MasterCard</option>
+                                <option>RuPay</option>
+                            </select>
+                            <select class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                                <option>All Users</option>
+                                <option>Active Users</option>
+                                <option>Inactive Users</option>
+                                <option>New Users</option>
+                            </select>
+                            <input type="date" class="bg-gray-800 rounded-lg p-2 border border-gray-700" placeholder="Start Date">
+                            <input type="date" class="bg-gray-800 rounded-lg p-2 border border-gray-700" placeholder="End Date">
+                            <select class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                                <option>All Status</option>
+                                <option>Success</option>
+                                <option>Failed</option>
+                                <option>Pending</option>
+                            </select>
+                        </div>
+                        <div class="mt-4 text-right">
+                            <button class="clay-button px-4 py-2 text-blue-400 mr-2" onclick="resetFilters()">
+                                <i class="bi bi-arrow-counterclockwise mr-1"></i> Reset
+                            </button>
+                            <button class="clay-button px-4 py-2 text-green-400" onclick="applyFilters()">
+                                <i class="bi bi-funnel-fill mr-1"></i> Apply Filters
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <div class="clay-card">
+                            <h3 class="text-lg mb-4">Transaction Limit Usage (24h)</h3>
+                            <div class="w-full h-64">
+                                <canvas id="transactionChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="clay-card">
+                            <h3 class="text-lg mb-4">UPI ID Cooldown Timers</h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span>UPI ID #1234</span>
+                                    <span class="text-green-400">Available</span>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span>UPI ID #5678</span>
+                                        <span class="text-yellow-400" id="timer1">15:00 mins</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill bg-yellow-500" style="width: 50%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span>UPI ID #9012</span>
+                                        <span class="text-red-400" id="timer2">45:00 mins</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill bg-red-500" style="width: 75%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span>UPI ID #3456</span>
+                                        <span class="text-orange-400" id="timer3">30:00 mins</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill bg-orange-500" style="width: 60%"></div>
+                                    </div>
+                                </div>
+                                <div class="mt-4 text-center">
+                                    <button class="clay-button px-4 py-2 text-blue-400" onclick="showUPICooldownDetails()">
+                                        View All UPI Status
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transactions Table -->
+                    <div class="clay-card overflow-x-auto">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg">Latest Transactions</h3>
+                            <button class="clay-button px-4 py-2 text-blue-400" onclick="refreshTransactions()">
+                                <i class="bi bi-arrow-repeat mr-1"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="text-gray-400">
+                                        <th class="p-3 text-left">User</th>
+                                        <th class="p-3 text-left">Card Number</th>
+                                        <th class="p-3 text-left">UPI ID</th>
+                                        <th class="p-3 text-left">Amount</th>
+                                        <th class="p-3 text-left">Status</th>
+                                        <th class="p-3 text-left">Time</th>
+                                        <th class="p-3 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactionsTable" class="text-gray-300">
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">John Doe</td>
+                                        <td class="p-3">**** **** **** 1234</td>
+                                        <td class="p-3">user@upi</td>
+                                        <td class="p-3">₹1,000</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Success</span></td>
+                                        <td class="p-3">2 mins ago</td>
+                                        <td class="p-3">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewTransactionDetails('TX123456')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">Jane Smith</td>
+                                        <td class="p-3">**** **** **** 5678</td>
+                                        <td class="p-3">jane@upi</td>
+                                        <td class="p-3">₹2,500</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-yellow-900 text-yellow-400">Pending</span></td>
+                                        <td class="p-3">5 mins ago</td>
+                                        <td class="p-3">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewTransactionDetails('TX789012')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">Robert Johnson</td>
+                                        <td class="p-3">**** **** **** 9012</td>
+                                        <td class="p-3">robert@upi</td>
+                                        <td class="p-3">₹500</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-red-900 text-red-400">Failed</span></td>
+                                        <td class="p-3">10 mins ago</td>
+                                        <td class="p-3">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewTransactionDetails('TX345678')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">Emily Brown</td>
+                                        <td class="p-3">**** **** **** 3456</td>
+                                        <td class="p-3">emily@upi</td>
+                                        <td class="p-3">₹1,200</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Success</span></td>
+                                        <td class="p-3">15 mins ago</td>
+                                        <td class="p-3">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewTransactionDetails('TX901234')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <button class="clay-button px-4 py-2 text-blue-400" onclick="showContent('transactions', document.querySelector('[href=\'#transactions\']'))">
+                                View All Transactions
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users Content -->
+                <div id="users">
+                    <div class="clay-card mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl">User Management</h2>
+                            <button class="clay-button px-4 py-2 text-green-400" onclick="showAddUserModal()">
+                                <i class="bi bi-plus-lg mr-2"></i>Add New User
+                            </button>
+                        </div>
+                        
+                        <!-- Filters for users -->
+                        <div class="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <input type="text" placeholder="Search by name, email..." class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                            <select class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                                <option>All Status</option>
+                                <option>Active</option>
+                                <option>Inactive</option>
+                                <option>Blocked</option>
+                            </select>
+                            <button class="clay-button px-4 py-2 text-blue-400">
+                                <i class="bi bi-search mr-1"></i> Search
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="text-gray-400">
+                                        <th class="p-3 text-left">ID</th>
+                                        <th class="p-3 text-left">Name</th>
+                                        <th class="p-3 text-left">Email</th>
+                                        <th class="p-3 text-left">Registered On</th>
+                                        <th class="p-3 text-left">Status</th>
+                                        <th class="p-3 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTable" class="text-gray-300">
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">U001</td>
+                                        <td class="p-3">John Doe</td>
+                                        <td class="p-3">john.doe@example.com</td>
+                                        <td class="p-3">15 Sep 2023</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Active</span></td>
+                                        <td class="p-3 flex space-x-2">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewUserDetails('U001')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-yellow-400" onclick="showEditUserModal('U001')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('user', 'U001')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">U002</td>
+                                        <td class="p-3">Jane Smith</td>
+                                        <td class="p-3">jane.smith@example.com</td>
+                                        <td class="p-3">20 Sep 2023</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Active</span></td>
+                                        <td class="p-3 flex space-x-2">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewUserDetails('U002')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-yellow-400" onclick="showEditUserModal('U002')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('user', 'U002')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">U003</td>
+                                        <td class="p-3">Robert Johnson</td>
+                                        <td class="p-3">robert.j@example.com</td>
+                                        <td class="p-3">25 Sep 2023</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-red-900 text-red-400">Blocked</span></td>
+                                        <td class="p-3 flex space-x-2">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewUserDetails('U003')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-yellow-400" onclick="showEditUserModal('U003')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('user', 'U003')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">U004</td>
+                                        <td class="p-3">Emily Brown</td>
+                                        <td class="p-3">emily.b@example.com</td>
+                                        <td class="p-3">28 Sep 2023</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-yellow-900 text-yellow-400">Inactive</span></td>
+                                        <td class="p-3 flex space-x-2">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewUserDetails('U004')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-yellow-400" onclick="showEditUserModal('U004')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('user', 'U004')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        <div class="mt-4 flex justify-between items-center">
+                            <div class="text-sm text-gray-400">
+                                Showing 1-4 of 24 users
+                            </div>
+                            <div class="flex space-x-2">
+                                <button class="clay-button px-3 py-1 text-gray-400" disabled>
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="clay-button px-3 py-1 text-white bg-blue-900">1</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">2</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">3</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Cards Content -->
+                <div id="cards">
+                    <div class="clay-card mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl">Card Management</h2>
+                            <button class="clay-button px-4 py-2 text-green-400" onclick="showAddCardModal()">
+                                <i class="bi bi-plus-lg mr-2"></i>Add New Card
+                            </button>
+                        </div>
+                        
+                        <!-- Filters for cards -->
+                        <div class="mb-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <input type="text" placeholder="Search by card number, name..." class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                            <select class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                                <option>All Card Types</option>
+                                <option>Visa</option>
+                                <option>MasterCard</option>
+                                <option>RuPay</option>
+                                <option>Other</option>
+                            </select>
+                            <select class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                                <option>All Status</option>
+                                <option>Active</option>
+                                <option>Blocked</option>
+                                <option>Expired</option>
+                            </select>
+                            <button class="clay-button px-4 py-2 text-blue-400">
+                                <i class="bi bi-search mr-1"></i> Search
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="text-gray-400">
+                                        <th class="p-3 text-left">Card ID</th>
+                                        <th class="p-3 text-left">Card Number</th>
+                                        <th class="p-3 text-left">Card Holder</th>
+                                        <th class="p-3 text-left">Card Type</th>
+                                        <th class="p-3 text-left">Expiry</th>
+                                        <th class="p-3 text-left">Status</th>
+                                        <th class="p-3 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cardsTable" class="text-gray-300">
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">C001</td>
+                                        <td class="p-3">**** **** **** 1234</td>
+                                        <td class="p-3">John Doe</td>
+                                        <td class="p-3">Visa</td>
+                                        <td class="p-3">09/25</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Active</span></td>
+                                        <td class="p-3 flex space-x-2">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewCardDetails('C001')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-yellow-400" onclick="showEditCardModal('C001')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('card', 'C001')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">C002</td>
+                                        <td class="p-3">**** **** **** 5678</td>
+                                        <td class="p-3">Jane Smith</td>
+                                        <td class="p-3">MasterCard</td>
+                                        <td class="p-3">11/24</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Active</span></td>
+                                        <td class="p-3 flex space-x-2">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewCardDetails('C002')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-yellow-400" onclick="showEditCardModal('C002')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('card', 'C002')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">C003</td>
+                                        <td class="p-3">**** **** **** 9012</td>
+                                        <td class="p-3">Robert Johnson</td>
+                                        <td class="p-3">RuPay</td>
+                                        <td class="p-3">04/24</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-red-900 text-red-400">Blocked</span></td>
+                                        <td class="p-3 flex space-x-2">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewCardDetails('C003')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-yellow-400" onclick="showEditCardModal('C003')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('card', 'C003')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">C004</td>
+                                        <td class="p-3">**** **** **** 3456</td>
+                                        <td class="p-3">Emily Brown</td>
+                                        <td class="p-3">Visa</td>
+                                        <td class="p-3">01/26</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-yellow-900 text-yellow-400">Expiring Soon</span></td>
+                                        <td class="p-3 flex space-x-2">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewCardDetails('C004')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-yellow-400" onclick="showEditCardModal('C004')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('card', 'C004')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        <div class="mt-4 flex justify-between items-center">
+                            <div class="text-sm text-gray-400">
+                                Showing 1-4 of 18 cards
+                            </div>
+                            <div class="flex space-x-2">
+                                <button class="clay-button px-3 py-1 text-gray-400" disabled>
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="clay-button px-3 py-1 text-white bg-blue-900">1</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">2</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">3</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- UPI IDs Content -->
+                <div id="upiids">
+                    <div class="clay-card mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl">UPI ID Management</h2>
+                            <button class="clay-button px-4 py-2 text-green-400" onclick="showAddUPIModal()">
+                                <i class="bi bi-plus-lg mr-2"></i>Add New UPI ID
+                            </button>
+                        </div>
+                        
+                        <!-- Filters for UPI IDs -->
+                        <div class="mb-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <input type="text" placeholder="Search by UPI ID..." class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                            <select class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                                <option>All Providers</option>
+                                <option>Google Pay</option>
+                                <option>PhonePe</option>
+                                <option>Paytm</option>
+                                <option>Other</option>
+                            </select>
+                            <select class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                                <option>All Status</option>
+                                <option>Available</option>
+                                <option>In Cooldown</option>
+                                <option>Blocked</option>
+                            </select>
+                            <button class="clay-button px-4 py-2 text-blue-400">
+                                <i class="bi bi-search mr-1"></i> Search
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="text-gray-400">
+                                        <th class="p-3 text-left">UPI ID</th>
+                                        <th class="p-3 text-left">Provider</th>
+                                        <th class="p-3 text-left">Linked Account</th>
+                                        <th class="p-3 text-left">Daily Limit</th>
+                                        <th class="p-3 text-left">Usage Today</th>
+                                        <th class="p-3 text-left">Status</th>
+                                        <th class="p-3 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="upiTable" class="text-gray-300">
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">user1@upi</td>
+                                        <td class="p-3">Google Pay</td>
+                                        <td class="p-3">**** 1234</td>
+                                        <td class="p-3">₹25,000</td>
+                                        <td class="p-3">₹12,500 (50%)</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Available</span></td>
+                                        <td class="p-3 flex space-x-2">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewUPIDetails('user1@upi')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-yellow-400" onclick="showEditUPIModal('user1@upi')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('upi', 'user1@upi')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">user2@upi</td>
+                                        <td class="p-3">PhonePe</td>
+                                        <td class="p-3">**** 5678</td>
+                                        <td class="p-3">₹30,000</td>
+                                        <td class="p-3">₹9,000 (30%)</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-yellow-900 text-yellow-400">In Cooldown</span></td>
+                                        <td class="p-3 flex space-x-2">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewUPIDetails('user2@upi')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-yellow-400" onclick="showEditUPIModal('user2@upi')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('upi', 'user2@upi')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">user3@upi</td>a
+                                        <td class="p-3">Paytm</td>
+                                        <td class="p-3">**** 9012</td>
+                                        <td class="p-3">₹20,000</td>
+                                        <td class="p-3">₹18,000 (90%)</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-red-900 text-red-400">Blocked</span></td>
+                                        <td class="p-3 flex space-x-2">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewUPIDetails('user3@upi')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-yellow-400" onclick="showEditUPIModal('user3@upi')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('upi', 'user3@upi')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">user4@upi</td>
+                                        <td class="p-3">Google Pay</td>
+                                        <td class="p-3">**** 3456</td>
+                                        <td class="p-3">₹35,000</td>
+                                        <td class="p-3">₹5,000 (14%)</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Available</span></td>
+                                        <td class="p-3 flex space-x-2">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewUPIDetails('user4@upi')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-yellow-400" onclick="showEditUPIModal('user4@upi')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('upi', 'user4@upi')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        <div class="mt-4 flex justify-between items-center">
+                            <div class="text-sm text-gray-400">
+                                Showing 1-4 of 12 UPI IDs
+                            </div>
+                            <div class="flex space-x-2">
+                                <button class="clay-button px-3 py-1 text-gray-400" disabled>
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="clay-button px-3 py-1 text-white bg-blue-900">1</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">2</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">3</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Transactions Content -->
+                <div id="transactions">
+                    <div class="clay-card mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl">Transaction History</h2>
+                            <div>
+                                <button class="clay-button px-4 py-2 text-blue-400 mr-2" onclick="exportTransactions()">
+                                    <i class="bi bi-download mr-1"></i> Export
+                                </button>
+                                <button class="clay-button px-4 py-2 text-green-400" onclick="refreshTransactions()">
+                                    <i class="bi bi-arrow-repeat mr-1"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Filters for transactions -->
+                        <div class="mb-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                            <input type="text" placeholder="Transaction ID" class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                            <select class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                                <option>All Users</option>
+                                <option>John Doe</option>
+                                <option>Jane Smith</option>
+                                <option>Robert Johnson</option>
+                            </select>
+                            <select class="bg-gray-800 rounded-lg p-2 border border-gray-700">
+                                <option>All Status</option>
+                                <option>Success</option>
+                                <option>Pending</option>
+                                <option>Failed</option>
+                            </select>
+                            <input type="date" class="bg-gray-800 rounded-lg p-2 border border-gray-700" placeholder="Start Date">
+                            <input type="date" class="bg-gray-800 rounded-lg p-2 border border-gray-700" placeholder="End Date">
+                            <button class="clay-button px-4 py-2 text-blue-400">
+                                <i class="bi bi-search mr-1"></i> Search
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="text-gray-400">
+                                        <th class="p-3 text-left">Transaction ID</th>
+                                        <th class="p-3 text-left">User</th>
+                                        <th class="p-3 text-left">Card Number</th>
+                                        <th class="p-3 text-left">UPI ID</th>
+                                        <th class="p-3 text-left">Amount</th>
+                                        <th class="p-3 text-left">Status</th>
+                                        <th class="p-3 text-left">Date & Time</th>
+                                        <th class="p-3 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactionsDetailTable" class="text-gray-300">
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">TX123456</td>
+                                        <td class="p-3">John Doe</td>
+                                        <td class="p-3">**** **** **** 1234</td>
+                                        <td class="p-3">user@upi</td>
+                                        <td class="p-3">₹1,000</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Success</span></td>
+                                        <td class="p-3">2023-10-02 14:30:12</td>
+                                        <td class="p-3">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewTransactionDetails('TX123456')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">TX789012</td>
+                                        <td class="p-3">Jane Smith</td>
+                                        <td class="p-3">**** **** **** 5678</td>
+                                        <td class="p-3">jane@upi</td>
+                                        <td class="p-3">₹2,500</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-yellow-900 text-yellow-400">Pending</span></td>
+                                        <td class="p-3">2023-10-02 14:25:45</td>
+                                        <td class="p-3">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewTransactionDetails('TX789012')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">TX345678</td>
+                                        <td class="p-3">Robert Johnson</td>
+                                        <td class="p-3">**** **** **** 9012</td>
+                                        <td class="p-3">robert@upi</td>
+                                        <td class="p-3">₹500</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-red-900 text-red-400">Failed</span></td>
+                                        <td class="p-3">2023-10-02 14:20:33</td>
+                                        <td class="p-3">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewTransactionDetails('TX345678')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">TX901234</td>
+                                        <td class="p-3">Emily Brown</td>
+                                        <td class="p-3">**** **** **** 3456</td>
+                                        <td class="p-3">emily@upi</td>
+                                        <td class="p-3">₹1,200</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Success</span></td>
+                                        <td class="p-3">2023-10-02 14:15:27</td>
+                                        <td class="p-3">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewTransactionDetails('TX901234')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-t border-gray-800">
+                                        <td class="p-3">TX567890</td>
+                                        <td class="p-3">Michael Wilson</td>
+                                        <td class="p-3">**** **** **** 7890</td>
+                                        <td class="p-3">michael@upi</td>
+                                        <td class="p-3">₹3,500</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Success</span></td>
+                                        <td class="p-3">2023-10-02 14:10:19</td>
+                                        <td class="p-3">
+                                            <button class="clay-button p-1 text-blue-400" onclick="viewTransactionDetails('TX567890')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        <div class="mt-4 flex justify-between items-center">
+                            <div class="text-sm text-gray-400">
+                                Showing 1-5 of 250 transactions
+                            </div>
+                            <div class="flex space-x-2">
+                                <button class="clay-button px-3 py-1 text-gray-400" disabled>
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <button class="clay-button px-3 py-1 text-white bg-blue-900">1</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">2</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">3</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">...</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">50</button>
+                                <button class="clay-button px-3 py-1 text-gray-300">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reports Content -->
+                <div id="reports">
+                    <div class="clay-card mb-6">
+                        <h2 class="text-xl mb-4">Reports</h2>
+                        
+                        <!-- Report types -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                            <div class="clay-card cursor-pointer" onclick="generateReport('daily')">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="text-lg">Daily Transaction Report</h3>
+                                    <i class="bi bi-file-earmark-text text-2xl text-blue-400"></i>
+                                </div>
+                                <p class="text-gray-400 mt-2">Summary of daily transaction activities</p>
+                            </div>
+                            <div class="clay-card cursor-pointer" onclick="generateReport('user')">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="text-lg">User Activity Report</h3>
+                                    <i class="bi bi-people text-2xl text-blue-400"></i>
+                                </div>
+                                <p class="text-gray-400 mt-2">Detailed report of user activities</p>
+                            </div>
+                            <div class="clay-card cursor-pointer" onclick="generateReport('financial')">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="text-lg">Financial Summary</h3>
+                                    <i class="bi bi-graph-up text-2xl text-blue-400"></i>
+                                </div>
+                                <p class="text-gray-400 mt-2">Financial performance and metrics</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Custom report builder -->
+                        <div class="clay-card">
+                            <h3 class="text-lg mb-4">Custom Report Builder</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <label class="text-gray-400 block mb-2">Select Report Type</label>
+                                    <select class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                        <option>Transaction Report</option>
+                                        <option>User Report</option>
+                                        <option>Card Usage Report</option>
+                                        <option>UPI Performance Report</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-gray-400 block mb-2">Date Range</label>
+                                    <select class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                        <option>Today</option>
+                                        <option>Yesterday</option>
+                                        <option>Last 7 days</option>
+                                        <option>Last 30 days</option>
+                                        <option>Custom range</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-gray-400 block mb-2">Format</label>
+                                    <select class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                        <option>PDF</option>
+                                        <option>Excel</option>
+                                        <option>CSV</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="text-gray-400 block mb-2">Data Fields to Include</label>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="custom-checkbox mr-2" checked>
+                                        <label>Transaction ID</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="custom-checkbox mr-2" checked>
+                                        <label>User</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="custom-checkbox mr-2" checked>
+                                        <label>Amount</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="custom-checkbox mr-2" checked>
+                                        <label>Status</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="custom-checkbox mr-2">
+                                        <label>Card Details</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="custom-checkbox mr-2">
+                                        <label>UPI ID</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="custom-checkbox mr-2">
+                                        <label>Timestamp</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="custom-checkbox mr-2">
+                                        <label>IP Address</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-right">
+                                <button class="clay-button px-5 py-2 text-blue-400" onclick="generateCustomReport()">
+                                    <i class="bi bi-file-earmark-arrow-down mr-1"></i> Generate Report
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Recent reports -->
+                        <div class="mt-6">
+                            <h3 class="text-lg mb-4">Recent Reports</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="text-gray-400">
+                                            <th class="p-3 text-left">Report Name</th>
+                                            <th class="p-3 text-left">Type</th>
+                                            <th class="p-3 text-left">Generated On</th>
+                                            <th class="p-3 text-left">Size</th>
+                                            <th class="p-3 text-left">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-gray-300">
+                                        <tr class="border-t border-gray-800">
+                                            <td class="p-3">Daily_Transactions_20231002.pdf</td>
+                                            <td class="p-3">Transaction Report</td>
+                                            <td class="p-3">2023-10-02 09:15:22</td>
+                                            <td class="p-3">1.2 MB</td>
+                                            <td class="p-3">
+                                                <button class="clay-button p-1 text-blue-400 mr-1" onclick="downloadReport('Daily_Transactions_20231002.pdf')">
+                                                    <i class="bi bi-download"></i>
+                                                </button>
+                                                <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('report', 'Daily_Transactions_20231002.pdf')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr class="border-t border-gray-800">
+                                            <td class="p-3">User_Activity_Sep2023.xlsx</td>
+                                            <td class="p-3">User Report</td>
+                                            <td class="p-3">2023-10-01 16:45:12</td>
+                                            <td class="p-3">3.5 MB</td>
+                                            <td class="p-3">
+                                                <button class="clay-button p-1 text-blue-400 mr-1" onclick="downloadReport('User_Activity_Sep2023.xlsx')">
+                                                    <i class="bi bi-download"></i>
+                                                </button>
+                                                <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('report', 'User_Activity_Sep2023.xlsx')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr class="border-t border-gray-800">
+                                            <td class="p-3">Financial_Summary_Q3_2023.pdf</td>
+                                            <td class="p-3">Financial Report</td>
+                                            <td class="p-3">2023-09-30 13:20:45</td>
+                                            <td class="p-3">2.8 MB</td>
+                                            <td class="p-3">
+                                                <button class="clay-button p-1 text-blue-400 mr-1" onclick="downloadReport('Financial_Summary_Q3_2023.pdf')">
+                                                    <i class="bi bi-download"></i>
+                                                </button>
+                                                <button class="clay-button p-1 text-red-400" onclick="showDeleteConfirmation('report', 'Financial_Summary_Q3_2023.pdf')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings Content -->
+                <div id="settings">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- System Settings -->
+                        <div class="clay-card">
+                            <h2 class="text-xl mb-4">System Settings</h2>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-gray-400 mb-1">UPI Transaction Timeout (seconds)</label>
+                                    <input type="number" value="60" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-400 mb-1">UPI Cooldown Period (minutes)</label>
+                                    <input type="number" value="30" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-400 mb-1">Maximum Transaction Retries</label>
+                                    <input type="number" value="3" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-400 mb-1">Dashboard Refresh Interval (seconds)</label>
+                                    <input type="number" value="30" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-400 mb-1">Session Timeout (minutes)</label>
+                                    <input type="number" value="30" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                </div>
+                                <div class="text-right">
+                                    <button class="clay-button px-4 py-2 text-green-400" onclick="saveSettings('system')">
+                                        Save Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Notification Settings -->
+                        <div class="clay-card">
+                            <h2 class="text-xl mb-4">Notification Settings</h2>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-gray-400 mb-1">Email Notifications</label>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center">
+                                            <input type="checkbox" class="custom-checkbox mr-2" checked>
+                                            <span>Failed Transactions</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" class="custom-checkbox mr-2" checked>
+                                            <span>New User Registrations</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" class="custom-checkbox mr-2">
+                                            <span>System Updates</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" class="custom-checkbox mr-2" checked>
+                                            <span>Daily Reports</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-gray-400 mb-1">SMS Notifications</label>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center">
+                                            <input type="checkbox" class="custom-checkbox mr-2" checked>
+                                            <span>Critical Alerts</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" class="custom-checkbox mr-2">
+                                            <span>Transaction Exceeding ₹10,000</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-gray-400 mb-1">Admin Email Address</label>
+                                    <input type="email" value="admin@example.com" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                </div>
+                                
+                                <div class="text-right">
+                                    <button class="clay-button px-4 py-2 text-green-400" onclick="saveSettings('notification')">
+                                        Save Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Security Settings -->
+                        <div class="clay-card">
+                            <h2 class="text-xl mb-4">Security Settings</h2>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-gray-400 mb-1">Enable Two-Factor Authentication</label>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" class="custom-checkbox mr-2" checked>
+                                        <span>Required for all admin users</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-gray-400 mb-1">Password Policy</label>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center">
+                                            <input type="checkbox" class="custom-checkbox mr-2" checked>
+                                            <span>Require uppercase letters</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" class="custom-checkbox mr-2" checked>
+                                            <span>Require numbers</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" class="custom-checkbox mr-2" checked>
+                                            <span>Require special characters</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" class="custom-checkbox mr-2" checked>
+                                            <span>Minimum 10 characters</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-gray-400 mb-1">Login Attempts Before Lockout</label>
+                                    <input type="number" value="5" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-gray-400 mb-1">IP Whitelist (comma separated)</label>
+                                    <textarea class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700" rows="2">192.168.1.1, 203.0.113.0/24</textarea>
+                                </div>
+                                
+                                <div class="text-right">
+                                    <button class="clay-button px-4 py-2 text-green-400" onclick="saveSettings('security')">
+                                        Save Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Account Settings -->
+                    <div class="clay-card mt-6">
+                        <h2 class="text-xl mb-4">Account Settings</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h3 class="text-lg mb-3">Profile Information</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-gray-400 mb-1">Full Name</label>
+                                        <input type="text" value="Admin User" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-400 mb-1">Email Address</label>
+                                        <input type="email" value="admin@example.com" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-400 mb-1">Phone Number</label>
+                                        <input type="tel" value="+1 555-123-4567" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h3 class="text-lg mb-3">Change Password</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-gray-400 mb-1">Current Password</label>
+                                        <input type="password" placeholder="••••••••" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-400 mb-1">New Password</label>
+                                        <input type="password" placeholder="••••••••" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-400 mb-1">Confirm New Password</label>
+                                        <input type="password" placeholder="••••••••" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-right mt-4">
+                            <button class="clay-button px-4 py-2 text-blue-400 mr-2" onclick="resetAccountForm()">
+                                Reset
+                            </button>
+                            <button class="clay-button px-4 py-2 text-green-400" onclick="saveSettings('account')">
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Transaction Details Modal -->
+    <div id="transactionDetailsModal" class="modal">
+        <div class="modal-content max-w-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl">Transaction Details</h3>
+                <button class="clay-button p-1" onclick="closeModal('transactionDetailsModal')">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div id="transactionDetails" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-gray-400">Transaction ID</p>
+                        <p class="font-medium">TX123456</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">Date & Time</p>
+                        <p class="font-medium">2023-10-02 14:30:12</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">User</p>
+                        <p class="font-medium">John Doe (ID: U001)</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">Status</p>
+                        <p><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Success</span></p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">Card Number</p>
+                        <p class="font-medium">**** **** **** 1234 (Visa)</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">UPI ID</p>
+                        <p class="font-medium">user@upi</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">Amount</p>
+                        <p class="font-medium">₹1,000</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">Transaction Fee</p>
+                        <p class="font-medium">₹5.00</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <p class="text-gray-400">Transaction Timeline</p>
+                    <div class="mt-2 space-y-3">
+                        <div class="flex">
+                            <div class="flex-none mr-3">
+                                <div class="h-5 w-5 rounded-full bg-green-500"></div>
+                                <div class="h-10 w-0.5 bg-gray-600 mx-auto"></div>
+                            </div>
+                            <div>
+                                <p class="font-medium">Transaction Initiated</p>
+                                <p class="text-sm text-gray-400">14:30:05</p>
+                            </div>
+                        </div>
+                        <div class="flex">
+                            <div class="flex-none mr-3">
+                                <div class="h-5 w-5 rounded-full bg-blue-500"></div>
+                                <div class="h-10 w-0.5 bg-gray-600 mx-auto"></div>
+                            </div>
+                            <div>
+                                <p class="font-medium">Payment Gateway Connected</p>
+                                <p class="text-sm text-gray-400">14:30:08</p>
+                            </div>
+                        </div>
+                        <div class="flex">
+                            <div class="flex-none mr-3">
+                                <div class="h-5 w-5 rounded-full bg-green-500"></div>
+                            </div>
+                            <div>
+                                <p class="font-medium">Transaction Completed</p>
+                                <p class="text-sm text-gray-400">14:30:12</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button class="clay-button px-4 py-2 text-blue-400" onclick="printTransactionDetails('TX123456')">
+                        <i class="bi bi-printer mr-1"></i> Print
+                    </button>
+                    <button class="clay-button px-4 py-2 text-green-400" onclick="closeModal('transactionDetailsModal')">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl">Add New User</h3>
+                <button class="clay-button p-1" onclick="closeModal('addUserModal')">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <form id="addUserForm" class="space-y-4">
+                <div>
+                    <label class="block text-gray-400 mb-1">Full Name *</label>
+                    <input type="text" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700" required>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Email Address *</label>
+                    <input type="email" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700" required>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Phone Number *</label>
+                    <input type="tel" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700" required>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">User Role</label>
+                    <select class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700">
+                        <option>Standard User</option>
+                        <option>Privileged User</option>
+                        <option>Admin</option>
+                    </select>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" class="custom-checkbox mr-2" checked>
+                    <span>Send welcome email with login details</span>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" class="clay-button px-4 py-2 text-gray-300" onclick="closeModal('addUserModal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="clay-button px-4 py-2 text-green-400" onclick="addUser(event)">
+                        Add User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Add Card Modal -->
+    <div id="addCardModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl">Add New Card</h3>
+                <button class="clay-button p-1" onclick="closeModal('addCardModal')">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <form id="addCardForm" class="space-y-4">
+                <div>
+                    <label class="block text-gray-400 mb-1">User *</label>
+                    <select class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700" required>
+                        <option>Select User</option>
+                        <option>John Doe</option>
+                        <option>Jane Smith</option>
+                        <option>Robert Johnson</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Card Number *</label>
+                    <input type="text" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700" required pattern="[0-9]{16}">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-400 mb-1">Expiry Date *</label>
+                        <input type="text" placeholder="MM/YY" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700" required pattern="(0[1-9]|1[0-2])\/[0-9]{2}">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1">CVV *</label>
+                        <input type="text" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700" required pattern="[0-9]{3,4}">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Card Type *</label>
+                    <select class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700" required>
+                        <option>Visa</option>
+                        <option>MasterCard</option>
+                        <option>RuPay</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" class="custom-checkbox mr-2" checked>
+                    <span>Set as default payment method</span>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" class="clay-button px-4 py-2 text-gray-300" onclick="closeModal('addCardModal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="clay-button px-4 py-2 text-green-400" onclick="addCard(event)">
+                        Add Card
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Add UPI ID Modal -->
+    <div id="addUPIModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl">Add New UPI ID</h3>
+                <button class="clay-button p-1" onclick="closeModal('addUPIModal')">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <form id="addUPIForm" class="space-y-4">
+                <div>
+                    <label class="block text-gray-400 mb-1">UPI ID *</label>
+                    <input type="text" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700" required>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">UPI Provider *</label>
+                    <select class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700" required>
+                        <option>Google Pay</option>
+                        <option>PhonePe</option>
+                        <option>Paytm</option>
+                        <option>BHIM</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Linked Account/Card *</label>
+                    <select class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700" required>
+                        <option>Select Account/Card</option>
+                        <option>**** **** **** 1234 (Visa)</option>
+                        <option>**** **** **** 5678 (MasterCard)</option>
+                        <option>**** **** **** 9012 (RuPay)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Daily Transaction Limit (₹) *</label>
+                    <input type="number" value="25000" class="bg-gray-800 rounded-lg p-2 w-full border border-gray-700" required>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" class="custom-checkbox mr-2" checked>
+                    <span>Activate UPI ID immediately</span>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" class="clay-button px-4 py-2 text-gray-300" onclick="closeModal('addUPIModal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="clay-button px-4 py-2 text-green-400" onclick="addUPI(event)">
+                        Add UPI ID
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" class="modal">
+        <div class="modal-content max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl text-red-400">Confirm Deletion</h3>
+                <button class="clay-button p-1" onclick="closeModal('deleteConfirmModal')">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="text-center space-y-4">
+                <i class="bi bi-exclamation-triangle text-5xl text-red-400"></i>
+                <p id="deleteConfirmMessage">Are you sure you want to delete this item? This action cannot be undone.</p>
+            </div>
+            <div class="flex justify-center space-x-4 mt-6">
+                <button class="clay-button px-4 py-2 text-gray-300" onclick="closeModal('deleteConfirmModal')">
+                    Cancel
+                </button>
+                <button class="clay-button px-4 py-2 text-red-400" onclick="confirmDelete()">
+                    <i class="bi bi-trash mr-1"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutConfirmModal" class="modal">
+        <div class="modal-content max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl">Logout Confirmation</h3>
+                <button class="clay-button p-1" onclick="closeModal('logoutConfirmModal')">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <p>Are you sure you want to log out from the UPI Admin Panel?</p>
+            <div class="flex justify-center space-x-4 mt-6">
+                <button class="clay-button px-4 py-2 text-gray-300" onclick="closeModal('logoutConfirmModal')">
+                    Cancel
+                </button>
+                <button class="clay-button px-4 py-2 text-red-400" onclick="logout()">
+                    <i class="bi bi-box-arrow-right mr-1"></i> Logout
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- UPI Cooldown Details Modal -->
+    <div id="upiCooldownModal" class="modal">
+        <div class="modal-content max-w-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl">UPI ID Status Details</h3>
+                <button class="clay-button p-1" onclick="closeModal('upiCooldownModal')">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-gray-400">
+                            <th class="p-3 text-left">UPI ID</th>
+                            <th class="p-3 text-left">Provider</th>
+                            <th class="p-3 text-left">Daily Limit Used</th>
+                            <th class="p-3 text-left">Cooldown Status</th>
+                            <th class="p-3 text-left">Available At</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-300">
+                        <tr class="border-t border-gray-800">
+                            <td class="p-3">user1@upi</td>
+                            <td class="p-3">Google Pay</td>
+                            <td class="p-3">
+                                <div class="relative pt-1">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <span class="text-xs font-semibold inline-block text-blue-400">50%</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-xs font-semibold inline-block text-gray-400">₹12,500/₹25,000</span>
+                                        </div>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill bg-blue-500" style="width: 50%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Available</span></td>
+                            <td class="p-3">Now</td>
+                        </tr>
+                        <tr class="border-t border-gray-800">
+                            <td class="p-3">user2@upi</td>
+                            <td class="p-3">PhonePe</td>
+                            <td class="p-3">
+                                <div class="relative pt-1">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <span class="text-xs font-semibold inline-block text-blue-400">30%</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-xs font-semibold inline-block text-gray-400">₹9,000/₹30,000</span>
+                                        </div>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill bg-blue-500" style="width: 30%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-3"><span class="px-2 py-1 rounded-full bg-yellow-900 text-yellow-400">In Cooldown</span></td>
+                            <td class="p-3">15:00 mins</td>
+                        </tr>
+                        <tr class="border-t border-gray-800">
+                            <td class="p-3">user3@upi</td>
+                            <td class="p-3">Paytm</td>
+                            <td class="p-3">
+                                <div class="relative pt-1">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <span class="text-xs font-semibold inline-block text-blue-400">90%</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-xs font-semibold inline-block text-gray-400">₹18,000/₹20,000</span>
+                                        </div>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill bg-red-500" style="width: 90%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-3"><span class="px-2 py-1 rounded-full bg-red-900 text-red-400">Blocked</span></td>
+                            <td class="p-3">Manual action required</td>
+                        </tr>
+                        <tr class="border-t border-gray-800">
+                            <td class="p-3">user4@upi</td>
+                            <td class="p-3">Google Pay</td>
+                            <td class="p-3">
+                                <div class="relative pt-1">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <span class="text-xs font-semibold inline-block text-blue-400">14%</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-xs font-semibold inline-block text-gray-400">₹5,000/₹35,000</span>
+                                        </div>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill bg-blue-500" style="width: 14%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Available</span></td>
+                            <td class="p-3">Now</td>
+                        </tr>
+                        <tr class="border-t border-gray-800">
+                            <td class="p-3">user5@upi</td>
+                            <td class="p-3">BHIM</td>
+                            <td class="p-3">
+                                <div class="relative pt-1">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <span class="text-xs font-semibold inline-block text-blue-400">65%</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-xs font-semibold inline-block text-gray-400">₹13,000/₹20,000</span>
+                                        </div>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill bg-yellow-500" style="width: 65%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-3"><span class="px-2 py-1 rounded-full bg-yellow-900 text-yellow-400">In Cooldown</span></td>
+                            <td class="p-3">30:00 mins</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button class="clay-button px-4 py-2 text-green-400" onclick="closeModal('upiCooldownModal')">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div id="toastNotification" class="fixed top-4 right-4 bg-green-900 text-green-200 px-4 py-2 rounded-lg clay-card opacity-0 transition-opacity duration-300 flex items-center">
+        <i class="bi bi-check-circle-fill mr-2"></i>
+        <span id="toastMessage">Operation successful!</span>
+    </div>
+
+    <script>
+        // Initialize Transaction Chart with improved styling
+        const initChart = () => {
+            const ctx = document.getElementById('transactionChart').getContext('2d');
+            
+            // Clear any existing chart
+            if (window.transactionChart) {
+                window.transactionChart.destroy();
+            }
+            
+            // Generate sample data for a 24 hour period
+            const hours = Array.from({length: 24}, (_, i) => `${i}:00`);
+            const usageData = Array.from({length: 24}, () => Math.floor(Math.random() * 80) + 10);
+            
+            // Create chart
+            window.transactionChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hours,
+                    datasets: [{
+                        label: 'Transaction Limit Usage',
+                        data: usageData,
+                        borderColor: '#60A5FA',
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#60A5FA',
+                        pointBorderColor: '#2a3442',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutQuart'
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#374151',
+                            titleColor: '#F3F4F6',
+                            bodyColor: '#D1D5DB',
+                            borderColor: '#4B5563',
+                            borderWidth: 1,
+                            padding: 10,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `Usage: ${context.parsed.y}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#9CA3AF',
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#9CA3AF',
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        // Update chart data periodically
+        const updateChart = () => {
+            if (window.transactionChart) {
+                const newData = window.transactionChart.data.datasets[0].data.map(value => {
+                    // Slightly adjust existing values for a realistic live effect
+                    const change = Math.random() * 10 - 5;
+                    return Math.min(100, Math.max(0, value + change));
+                });
+                
+                window.transactionChart.data.datasets[0].data = newData;
+                window.transactionChart.update();
+            }
+        };
+        
+        // Content switching function
+        function showContent(contentId, linkElement) {
+            // Hide all content sections
+            document.querySelectorAll('#contentArea > div').forEach(div => {
+                div.classList.remove('active');
+                div.style.display = 'none';
+            });
+            
+            // Show selected content
+            const selectedContent = document.getElementById(contentId);
+            selectedContent.classList.add('active');
+            selectedContent.style.display = 'block';
+            
+            // Update sidebar active state
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            if (linkElement) {
+                linkElement.classList.add('active');
+            }
+            
+            // Initialize/refresh charts if showing dashboard
+            if (contentId === 'dashboard') {
+                initChart();
+            }
+            
+            // Close sidebar on mobile after selection
+            if (window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.remove('open');
+            }
+        }
+
+        // Show modal
+        function showModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+            setTimeout(() => {
+                document.getElementById(modalId).style.opacity = '1';
+            }, 50);
+        }
+
+        // Close modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById(modalId).style.display = 'none';
+            }, 300);
+        }
+
+        // Show toast notification
+        function showToast(message, success = true) {
+            const toast = document.getElementById('toastNotification');
+            const messageEl = document.getElementById('toastMessage');
+            
+            // Update icon and color based on status
+            if (success) {
+                toast.className = 'fixed top-4 right-4 bg-green-900 text-green-200 px-4 py-2 rounded-lg clay-card opacity-0 transition-opacity duration-300 flex items-center';
+                toast.innerHTML = '<i class="bi bi-check-circle-fill mr-2"></i><span id="toastMessage">' + message + '</span>';
+            } else {
+                toast.className = 'fixed top-4 right-4 bg-red-900 text-red-200 px-4 py-2 rounded-lg clay-card opacity-0 transition-opacity duration-300 flex items-center';
+                toast.innerHTML = '<i class="bi bi-exclamation-circle-fill mr-2"></i><span id="toastMessage">' + message + '</span>';
+            }
+            
+            // Show and then hide toast
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 3000);
+        }
+
+        // Update cooldown timers
+        function updateCooldownTimers() {
+            const timer1 = document.getElementById('timer1');
+            const timer2 = document.getElementById('timer2');
+            const timer3 = document.getElementById('timer3');
+            
+            // Parse current times
+            let [min1, sec1] = timer1.textContent.split(':').map(x => parseInt(x));
+            let [min2, sec2] = timer2.textContent.split(':').map(x => parseInt(x));
+            let [min3, sec3] = timer3.textContent.split(':').map(x => parseInt(x));
+            
+            // Update timers
+            if (min1 > 0 || sec1 > 0) {
+                if (sec1 === 0) {
+                    min1--;
+                    sec1 = 59;
+                } else {
+                    sec1--;
+                }
+                timer1.textContent = `${min1.toString().padStart(2, '0')}:${sec1.toString().padStart(2, '0')} mins`;
+            }
+            
+            if (min2 > 0 || sec2 > 0) {
+                if (sec2 === 0) {
+                    min2--;
+                    sec2 = 59;
+                } else {
+                    sec2--;
+                }
+                timer2.textContent = `${min2.toString().padStart(2, '0')}:${sec2.toString().padStart(2, '0')} mins`;
+            }
+            
+            if (min3 > 0 || sec3 > 0) {
+                if (sec3 === 0) {
+                    min3--;
+                    sec3 = 59;
+                } else {
+                    sec3--;
+                }
+                timer3.textContent = `${min3.toString().padStart(2, '0')}:${sec3.toString().padStart(2, '0')} mins`;
+            }
+        }
+
+        // User Details view
+        function viewUserDetails(userId) {
+            // In a real app, this would fetch user details from API
+            showToast(`Viewing user details for ID: ${userId}`);
+        }
+
+        // Card Details view
+        function viewCardDetails(cardId) {
+            // In a real app, this would fetch card details from API
+            showToast(`Viewing card details for ID: ${cardId}`);
+        }
+
+        // UPI Details view
+        function viewUPIDetails(upiId) {
+            // In a real app, this would fetch UPI details from API
+            showToast(`Viewing UPI details for ID: ${upiId}`);
+        }
+
+        // Transaction Details view
+        function viewTransactionDetails(txId) {
+            // In a real app, this would fetch transaction details from API
+            showToast(`Fetching transaction details for ID: ${txId}`, true);
+            
+            // Show modal with transaction details
+            showModal('transactionDetailsModal');
+        }
+
+        // Show Add User Modal
+        function showAddUserModal() {
+            showModal('addUserModal');
+        }
+
+        // Show Add Card Modal
+        function showAddCardModal() {
+            showModal('addCardModal');
+        }
+
+        // Show Add UPI Modal
+        function showAddUPIModal() {
+            showModal('addUPIModal');
+        }
+
+        // Show edit user modal
+        function showEditUserModal(userId) {
+            // In a real app, this would fetch user details and populate the form
+            showToast(`Loading user data for ID: ${userId}`, true);
+            // Would show an edit modal populated with user data
+        }
+
+        // Show edit card modal
+        function showEditCardModal(cardId) {
+            // In a real app, this would fetch card details and populate the form
+            showToast(`Loading card data for ID: ${cardId}`, true);
+            // Would show an edit modal populated with card data
+        }
+
+        // Show edit UPI modal
+        function showEditUPIModal(upiId) {
+            // In a real app, this would fetch UPI details and populate the form
+            showToast(`Loading UPI data for ID: ${upiId}`, true);
+            // Would show an edit modal populated with UPI data
+        }
+
+        // Show delete confirmation
+        function showDeleteConfirmation(itemType, itemId) {
+            const messageElement = document.getElementById('deleteConfirmMessage');
+            let message = '';
+            
+            switch(itemType) {
+                case 'user':
+                    message = `Are you sure you want to delete user with ID: ${itemId}? This will remove all associated cards and UPI IDs. This action cannot be undone.`;
+                    break;
+                case 'card':
+                    message = `Are you sure you want to delete card with ID: ${itemId}? This action cannot be undone.`;
+                    break;
+                case 'upi':
+                    message = `Are you sure you want to delete UPI ID: ${itemId}? This action cannot be undone.`;
+                    break;
+                case 'report':
+                    message = `Are you sure you want to delete the report: ${itemId}? This action cannot be undone.`;
+                    break;
+                default:
+                    message = 'Are you sure you want to delete this item? This action cannot be undone.';
+            }
+            
+            // Set message and item data
+            messageElement.textContent = message;
+            document.getElementById('deleteConfirmModal').dataset.itemType = itemType;
+            document.getElementById('deleteConfirmModal').dataset.itemId = itemId;
+            
+            // Show modal
+            showModal('deleteConfirmModal');
+        }
+
+        // Confirm delete
+        function confirmDelete() {
+            const modal = document.getElementById('deleteConfirmModal');
+            const itemType = modal.dataset.itemType;
+            const itemId = modal.dataset.itemId;
+            
+            // In a real app, this would call an API to delete the item
+            showToast(`${itemType} with ID: ${itemId} successfully deleted`, true);
+            
+            // Close modal
+            closeModal('deleteConfirmModal');
+        }
+
+        // Show logout confirmation
+        function showLogoutConfirm() {
+            showModal('logoutConfirmModal');
+        }
+
+        // Logout
+        function logout() {
+            // In a real app, this would handle the logout process
+            showToast('Logging out...', true);
+            
+            // Simulate logout redirect
+            setTimeout(() => {
+                window.location.href = '#login';
+                // In a real app, redirect to login page
+            }, 1500);
+            
+            // Close modal
+            closeModal('logoutConfirmModal');
+        }
+
+        // Add User
+        function addUser(event) {
+            event.preventDefault();
+            
+            // Here you'd handle form validation and API submission
+            showToast('New user added successfully', true);
+            
+            // Close modal
+            closeModal('addUserModal');
+        }
+
+        // Add Card
+        function addCard(event) {
+            event.preventDefault();
+            
+            // Here you'd handle form validation and API submission
+            showToast('New card added successfully', true);
+            
+            // Close modal
+            closeModal('addCardModal');
+        }
+
+        // Add UPI
+        function addUPI(event) {
+            event.preventDefault();
+            
+            // Here you'd handle form validation and API submission
+            showToast('New UPI ID added successfully', true);
+            
+            // Close modal
+            closeModal('addUPIModal');
+        }
+
+        // Show UPI Cooldown Details
+        function showUPICooldownDetails() {
+            showModal('upiCooldownModal');
+        }
+
+        // Refresh transactions
+        function refreshTransactions() {
+            // Show loading state
+            document.getElementById('transactionsTable').innerHTML = `
+                <tr class="border-t border-gray-800">
+                    <td colspan="7" class="p-3 text-center">
+                        <div class="flex justify-center items-center loading-pulse">
+                            <i class="bi bi-arrow-repeat mr-2 animate-spin"></i>
+                            Loading transactions...
+                        </div>
+                    </td>
+                </tr>
+            `;
+            
+            // Simulate API loading delay
+            setTimeout(() => {
+                // In a real app, this would fetch updated transactions from an API
+                document.getElementById('transactionsTable').innerHTML = `
+                    <tr class="border-t border-gray-800">
+                        <td class="p-3">John Doe</td>
+                        <td class="p-3">**** **** **** 1234</td>
+                        <td class="p-3">user@upi</td>
+                        <td class="p-3">₹1,000</td>
+                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Success</span></td>
+                        <td class="p-3">Just now</td>
+                        <td class="p-3">
+                            <button class="clay-button p-1 text-blue-400" onclick="viewTransactionDetails('TX123456')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="border-t border-gray-800">
+                        <td class="p-3">Jane Smith</td>
+                        <td class="p-3">**** **** **** 5678</td>
+                        <td class="p-3">jane@upi</td>
+                        <td class="p-3">₹2,500</td>
+                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Success</span></td>
+                        <td class="p-3">1 min ago</td>
+                        <td class="p-3">
+                            <button class="clay-button p-1 text-blue-400" onclick="viewTransactionDetails('TX789012')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="border-t border-gray-800">
+                        <td class="p-3">Robert Johnson</td>
+                        <td class="p-3">**** **** **** 9012</td>
+                        <td class="p-3">robert@upi</td>
+                        <td class="p-3">₹500</td>
+                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-red-900 text-red-400">Failed</span></td>
+                        <td class="p-3">3 mins ago</td>
+                        <td class="p-3">
+                            <button class="clay-button p-1 text-blue-400" onclick="viewTransactionDetails('TX345678')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="border-t border-gray-800">
+                        <td class="p-3">Emily Brown</td>
+                        <td class="p-3">**** **** **** 3456</td>
+                        <td class="p-3">emily@upi</td>
+                        <td class="p-3">₹1,200</td>
+                        <td class="p-3"><span class="px-2 py-1 rounded-full bg-green-900 text-green-400">Success</span></td>
+                        <td class="p-3">8 mins ago</td>
+                        <td class="p-3">
+                            <button class="clay-button p-1 text-blue-400" onclick="viewTransactionDetails('TX901234')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                
+                showToast('Transactions refreshed successfully', true);
+            }, 1500);
+        }
+
+        // Export transactions
+        function exportTransactions() {
+            showToast('Exporting transactions...', true);
+            // In a real app, this would generate and download a file
+        }
+
+        // Generate report
+        function generateReport(reportType) {
+            showToast(`Generating ${reportType} report...`, true);
+            // In a real app, this would generate and display/download a report
+        }
+
+        // Generate custom report
+        function generateCustomReport() {
+            showToast('Generating custom report...', true);
+            // In a real app, this would compile and generate a custom report
+        }
+
+        // Download report
+        function downloadReport(reportName) {
+            showToast(`Downloading report: ${reportName}`, true);
+            // In a real app, this would initiate a file download
+        }
+
+        // Print transaction details
+        function printTransactionDetails(txId) {
+            showToast(`Printing transaction details for: ${txId}`, true);
+            // In a real app, this would open a print dialog
+        }
+
+        // Reset account form
+        function resetAccountForm() {
+            showToast('Form reset', true);
+            // In a real app, this would clear form fields
+        }
+
+        // Save settings
+        function saveSettings(settingType) {
+            showToast(`${settingType.charAt(0).toUpperCase() + settingType.slice(1)} settings saved successfully`, true);
+            // In a real app, this would update settings in the database
+        }
+
+        // Apply filters
+        function applyFilters() {
+            showToast('Filters applied', true);
+            // In a real app, this would filter data based on selections
+        }
+
+        // Reset filters
+        function resetFilters() {
+            showToast('Filters reset', true);
+            // In a real app, this would clear filters
+        }
+        
+        // Mobile Menu Toggle
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.add('open');
+        });
+        
+        document.getElementById('closeSidebar').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.remove('open');
+        });
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize chart
+            initChart();
+            
+            // Setup interval for real-time updates
+            setInterval(() => {
+                // Update stats randomly for demo
+                document.querySelectorAll('#dashboard .clay-card .text-2xl').forEach(stat => {
+                    // Don't update if this isn't visible (another tab is active)
+                    if (!document.getElementById('dashboard').classList.contains('active')) return;
+                    
+                    const currentValue = parseInt(stat.textContent.replace(/[^0-9]/g, ''));
+                    const change = Math.floor(Math.random() * 10) - 3;
+                    let newValue = currentValue + change;
+                    
+                    // Make sure we don't go below 0
+                    newValue = Math.max(1, newValue);
+                    
+                    if (stat.id === 'amount24h') {
+                        stat.textContent = '₹' + newValue.toLocaleString();
+                    } else {
+                        stat.textContent = newValue.toLocaleString();
+                    }
+                });
+                
+                // Update cooldown timers
+                updateCooldownTimers();
+                
+                // Update chart data
+                updateChart();
+            }, 5000);
+            
+            // Set up cooldown timer updates (every second)
+            setInterval(updateCooldownTimers, 1000);
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
